@@ -5,12 +5,12 @@ require_once './app/vistas/generos.vista.php';
 class GenerosControlador {
     private $modelo;
     private $vista;
-
+    //Revisado
     public function __construct() {
         $this->modelo = new GenerosModelo();
         $this->vista = new GenerosVista();
     }
-
+    //revisado
     public function mostrarGeneros() {
         // obtengo los géneros de la DB
         $generos = $this->modelo->obtenerGeneros();
@@ -19,18 +19,46 @@ class GenerosControlador {
         return $this->vista->mostrarGeneros($generos);
     }
 
+    public function mostrarGenero($id) {
+        // obtengo los géneros de la DB
+        $genero = $this->modelo->obtenerGenero($id);
+        //obtiene los libros pertencientes a el genero.
+        $libros = $this->modelo->obtenerLibros($id);
+
+        // mando los géneros a la vista
+        return $this->vista->detalleGenero($genero,$libros);
+    }
+
+    public function mostrarFormularioCarga() {
+        return $this->vista->mostrarFormularioCarga(null);
+    }
+
+    private function procesarImagen(){
+        
+        $archivo = $_FILES['foto']['name'];
+        if ($archivo <> null) {
+            $informacion = pathinfo($archivo);
+            $fechaHoraActual = date('Y-m-d_H-i-s-ms');
+            //FALTARIA VALIDAR QUE EXTENSION SEA ALGUNA DE IMAGEN PARA PODER USARLA EN img.
+            // Obtener información sobre el archivo
+            $ruta = "img/".$informacion['filename'].$fechaHoraActual.'.'.$informacion['extension'];
+            move_uploaded_file($_FILES['foto']['tmp_name'], $ruta);
+        }
+        else $ruta = null; 
+        return $ruta;
+    }
+
+    //revisado
     public function agregarGenero() {
         if (!isset($_POST['nombre']) || empty($_POST['nombre'])) {
             return $this->vista->mostrarError('Falta completar el título');
         }
-    
-        if (!isset($_POST['Ruta_imagen']) || empty($_POST['Ruta_imagen'])) {
-            return $this->vista->mostrarError('Falta completar la Ruta_imagen');
-        }
-    
+        
+        $ruta = $this->procesarImagen();
+        
         $nombre = $_POST['nombre'];
-        $descripcion = $_POST['descripcion'];
-        $ruta_imagen = $_POST['Ruta_imagen'];
+        $descripcion = $_POST['descripcion'] ?? null;
+        $ruta_imagen =  $ruta; 
     
         $id = $this->modelo->insertarGenero($nombre, $descripcion, $ruta_imagen);
     
@@ -51,17 +79,39 @@ class GenerosControlador {
 
         header('Location: ' . BASE_URL);
     }
-
-    public function finalizarGenero($id) {
+    public function datosGenero($id) {
         $genero = $this->modelo->obtenerGenero($id);
 
         if (!$genero) {
             return $this->vista->mostrarError("No existe el género con el id=$id");
         }
 
-        // actualiza el género
-        $this->modelo->actualizarGenero($id);
+        // muestra el género
+        return $this->vista->mostrarFormularioCarga($genero);
+    }
+    
+    
+    public function editarGenero($id) {
+        $genero = $this->modelo->obtenerGenero($id);
+        
+        if (!$genero) {
+            return $this->vista->mostrarError("No existe el género con el id=$id");
+        }
+        var_dump($_POST);
+        $ruta = $genero->Ruta_Imagen;
+        if (isset( $_FILES['foto']) && isset( $_FILES['foto']['name'])){
+            var_dump($_FILES);
 
-        header('Location: ' . BASE_URL);
+            $ruta = $this->procesarImagen();
+        }
+        
+        $nombre = $_POST['nombre'];
+        $descripcion = $_POST['descripcion'] ?? null;
+        $ruta_imagen =  $ruta; 
+
+        // actualiza el género
+        $this->modelo->actualizarGenero($id, $nombre, $descripcion ,$ruta_imagen);
+
+        header('Location: ' . BASE_URL. "listar/$id");
     }
 }
